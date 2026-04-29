@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Subject Score Predictor</title>
+    <style>
+      :root {
+        --paper: #f6f1e7;
+        --panel: rgba(255, 252, 247, 0.94);
+        --ink: #1f2a24;
+        --muted: #617065;
+        --accent: #196b54;
+        --accent-soft: #e2f0eb;
+        --warm: #e8a63a;
+        --line: rgba(31, 42, 36, 0.12);
+        --danger: #b6422e;
+        --shadow: 0 24px 54px rgba(33, 39, 36, 0.12);
+      }
+
+      body[data-theme="dark"] {
+        --paper: #101715;
+        --panel: rgba(20, 29, 26, 0.94);
+        --ink: #edf4ef;
+        --muted: #a9bbb0;
+        --accent: #6dd0ae;
+        --accent-soft: #17342d;
+        --warm: #f3bf68;
+        --line: rgba(237, 244, 239, 0.12);
+        --danger: #ff8f7c;
+        --shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: Cambria, Georgia, serif;
+        background:
+          radial-gradient(circle at top left, rgba(232, 166, 58, 0.28), transparent 22%),
+          radial-gradient(circle at bottom right, rgba(25, 107, 84, 0.18), transparent 24%),
+          linear-gradient(135deg, #f8f3eb 0%, #edf5ef 100%);
+      }
+
+      body[data-theme="dark"] {
+        background:
+          radial-gradient(circle at top left, rgba(243, 191, 104, 0.12), transparent 22%),
+          radial-gradient(circle at bottom right, rgba(109, 208, 174, 0.12), transparent 24%),
+          linear-gradient(135deg, #0f1614 0%, #16211d 100%);
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 28px));
+        margin: 22px auto 34px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .hero,
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .theme-toggle {
+        width: auto;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        padding: 30px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        right: -60px;
+        top: -70px;
+        border-radius: 50%;
+        background: rgba(25, 107, 84, 0.1);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 12ch;
+        line-height: 0.95;
+        font-size: clamp(2.2rem, 4vw, 4.4rem);
+      }
+
+      .hero p {
+        max-width: 62ch;
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 1.04rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 22px;
+      }
+
+      .card {
+        padding: 24px;
+      }
+
+      .title {
+        margin: 0 0 8px;
+        font-size: 1.45rem;
+      }
+
+      .copy {
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+
+      .errors {
+        margin-bottom: 16px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(182, 66, 46, 0.18);
+        background: rgba(182, 66, 46, 0.08);
+        color: var(--danger);
+      }
+
+      .errors ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      form {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .field-wide {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-weight: 700;
+        font-size: 0.94rem;
+      }
+
+      .help {
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(31, 42, 36, 0.16);
+        font: inherit;
+        background: rgba(255, 255, 255, 0.85);
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid rgba(25, 107, 84, 0.24);
+        border-color: var(--accent);
+      }
+
+      button {
+        margin-top: 4px;
+        border: 0;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent) 0%, #124d3e 100%);
+        box-shadow: 0 14px 30px rgba(18, 77, 62, 0.24);
+      }
+
+      .result-box {
+        padding: 20px;
+        border-radius: 24px;
+        border: 1px solid rgba(25, 107, 84, 0.16);
+        background: linear-gradient(160deg, rgba(25, 107, 84, 0.09), rgba(232, 166, 58, 0.18));
+      }
+
+      .score {
+        margin: 10px 0 2px;
+        font-size: clamp(2.4rem, 5vw, 4rem);
+        line-height: 1;
+      }
+
+      .subscore {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .tag {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.76);
+        font-size: 0.9rem;
+      }
+
+      .reason-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .reason {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(10, 95, 66, 0.74);
+        border: 1px solid var(--line);
+      }
+
+      .graphs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .graph-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .graph-card h3 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+      }
+
+      .graph-card img {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: white;
+      }
+
+      body[data-theme="dark"] .graph-card img {
+        background: #ffffff;
+      }
+
+      .note {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: var(--accent-soft);
+        color: #184a3d;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 960px) {
+        .layout,
+        .graphs {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          width: min(100% - 18px, 1180px);
+          margin: 16px auto 24px;
+        }
+
+        .hero,
+        .card,
+        .graph-card {
+          border-radius: 22px;
+          padding: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="topbar">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch color mode">
+          Switch to Dark Mode
+        </button>
+      </div>
+
+      <section class="hero">
+        <p class="eyebrow">Student Performance Predictor</p>
+        <h1>Predict the final subject score</h1>
+          
+           <!-- This version keeps the form focused on clear inputs: test marks, study habits,
+            absences, health, travel time, free time, internet access, and a few background details
+            the model still needs from the dataset. The subject total can be any positive mark value.-->
+      
+      </section>
+
+      <section class="layout">
+        <section class="card">
+          <h2 class="title">Prediction Form</h2>
+          <p class="copy">
+            Enter the student's subject details below. The total marks field accepts any positive number,
+            and the app will scale the test marks correctly before prediction.
+          </p>
+
+          {% if errors %}
+          <div class="errors">
+            <strong>Please fix these issues:</strong>
+            <ul>
+              {% for error in errors %}
+              <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <form method="post">
+            <div class="grid">
+              {% for field in fields %}
+              <div class="field {% if field.name in ['subject'] %}field-wide{% endif %}">
+                <label for="{{ field.name }}">{{ field.label }}</label>
+                {% if field.type == "select" %}
+                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.name == 'total_marks' %}data-total-marks="true"{% endif %}>
+                  {% for option in field.options %}
+                  <option value="{{ option.value }}" {% if values[field.name]|string == option.value|string %}selected{% endif %}>
+                    {{ option.label }}
+                  </option>
+                  {% endfor %}
+                </select>
+                {% else %}
+                <input
+                  id="{{ field.name }}"
+                  name="{{ field.name }}"
+                  type="{{ field.type }}"
+                  value="{{ values[field.name] }}"
+                  {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+                  {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+                  {% if field.step is defined %}step="{{ field.step }}"{% endif %}
+                  {% if field.placeholder is defined %}placeholder="{{ field.placeholder }}"{% endif %}
+                  {% if field.name == 'total_marks' %}data-total-marks="true"{% endif %}
+                  {% if field.name in ['G1', 'G2'] %}data-score-input="true"{% endif %}
+                  required
+                >
+                {% endif %}
+                <div class="help">{{ field.help }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            <button type="submit">Estimate Final Score</button>
+          </form>
+        </section>
+
+        <aside class="card">
+          <h2 class="title">Prediction Result</h2>
+          <p class="copy">
+            The saved model predicts on a 20-point academic scale internally, then this page converts
+            the result to the subject total marks you selected.
+          </p>
+
+          <div class="result-box">
+            <div>Estimated final score</div>
+            <div class="score">
+              {% if prediction is not none %}
+              {{ "%.2f"|format(prediction) }} / {{ values.total_marks }}
+              {% else %}
+              --
+              {% endif %}
+            </div>
+            <div class="subscore">
+              {% if normalized_prediction is not none %}
+              Internal model score: {{ "%.2f"|format(normalized_prediction) }} / 20
+              {% else %}
+              Enter the form values and submit to see a prediction.
+              {% endif %}
+            </div>
+            <div class="tag">Model: {{ model_name }}</div>
+          </div>
+
+          <div class="reason-list">
+            <div class="reason">
+              <strong>Student</strong><br>
+              {{ values.name }} | Section {{ values.section }} | {{ values.subject }}
+            </div>
+            <div class="reason">
+              <strong>Why these inputs?</strong><br>
+              This form is intentionally limited to clearer inputs that matter most for prediction.
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="card">
+        <h2 class="title">Why the app estimated this score</h2>
+        <p class="copy">
+          These points and graphs show the main patterns that influenced the prediction.
+        </p>
+
+        <div class="note">
+          The graphs use the original training data. Your student's point is highlighted in the scatter plots.
+        </div>
+
+        <div class="reason-list">
+          {% for point in reason_points %}
+          <div class="reason">{{ point }}</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if graphs %}
+      <section class="graphs">
+        {% for graph in graphs %}
+        <article class="graph-card">
+          <h3>{{ graph.title }}</h3>
+          <img src="data:image/png;base64,{{ graph.image }}" alt="{{ graph.title }}">
+        </article>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </main>
+
+    <script>
+      const storageKey = 'student-ml-theme';
+      const themeToggle = document.getElementById('theme-toggle');
+      const preferredTheme = localStorage.getItem(storageKey);
+
+      function applyTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        themeToggle.textContent = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+      }
+
+      applyTheme(preferredTheme || 'light');
+
+      themeToggle.addEventListener('click', () => {
+        const nextTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        localStorage.setItem(storageKey, nextTheme);
+        applyTheme(nextTheme);
+      });
+
+      const totalMarksField = document.querySelector('[data-total-marks="true"]');
+      const scoreInputs = document.querySelectorAll('[data-score-input="true"]');
+
+      function syncScoreBounds() {
+        const total = Number(totalMarksField.value || 100);
+        scoreInputs.forEach((input) => {
+          input.max = String(total);
+        });
+      }
+
+      if (totalMarksField) {
+        totalMarksField.addEventListener('change', syncScoreBounds);
+        syncScoreBounds();
+      }
+    </script>
+  </body>
+  </html>

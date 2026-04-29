@@ -1,0 +1,17 @@
+{
+  "name": "Aarav Kumar",
+  "section": "10-A",
+  "subject": "Mathematics",
+  "total_marks": 100,
+  "sex": "F",
+  "Mjob": "teacher",
+  "Fjob": "services",
+  "traveltime": 1,
+  "studytime": 2,
+  "internet": "yes",
+  "freetime": 3,
+  "health": 5,
+  "absences": 2,
+  "G1": 65,
+  "G2": 70
+}
